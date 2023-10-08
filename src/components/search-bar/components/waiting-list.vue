@@ -40,6 +40,7 @@ export default {
       },
       {
         immediate: true,
+        deep: true,
       }
     );
 

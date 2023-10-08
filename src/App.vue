@@ -1,6 +1,9 @@
 <template>
   <div id="app">
-    <SearchBar :configList="configList" />
+    <SearchBar
+      @onSelectDataChange="handleSelectDataChange"
+      :configList="configList"
+    />
   </div>
 </template>
 
@@ -69,8 +72,13 @@ export default {
         show: false,
       },
     ]);
+
+    function handleSelectDataChange(val) {
+      console.log(val);
+    }
     return {
       configList,
+      handleSelectDataChange,
     };
   },
 };
