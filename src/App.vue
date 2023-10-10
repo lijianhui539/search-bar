@@ -28,11 +28,27 @@ export default {
         selectList: [
           {
             label: "任务令1",
-            value: "任务令1",
+            value: "order1",
           },
           {
             label: "任务令2",
-            value: "任务令2",
+            value: "order2",
+          },
+        ],
+        show: true,
+      },
+      {
+        fieldKey: "class",
+        fieldName: "班次",
+        comType: "radio",
+        selectList: [
+          {
+            label: "白班",
+            value: "白班",
+          },
+          {
+            label: "夜班",
+            value: "夜班",
           },
         ],
         show: true,

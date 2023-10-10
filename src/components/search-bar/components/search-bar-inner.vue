@@ -10,14 +10,47 @@
         trigger="click"
         :disabled="popoverDisabled(item)"
       >
+        <el-select
+          v-model="selectData[item.fieldKey]"
+          :multiple="item.comType === 'select'"
+          collapse-tags
+          :placeholder="'请选择' + item.fieldName"
+          @change="(val) => onSelectChange(val, item)"
+        >
+          <el-option
+            v-for="item in item.selectList"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          >
+          </el-option>
+        </el-select>
+
         <div slot="reference" class="field-item">
           <div class="field-item_title">{{ item.fieldName }}：</div>
           <div class="field-item_content">
-            <div class="content-select" v-if="item.comType === 'select'">
-              {{ renderCnNameData[item.fieldKey] }}
+            <div
+              class="content-select"
+              v-if="['select', 'radio'].includes(item.comType)"
+            >
+              <div
+                class="select-tag"
+                v-for="fieldNameItem in renderCnNameData[item.fieldKey]"
+                :key="fieldNameItem.value"
+              >
+                <div class="select-tag_value">
+                  {{ fieldNameItem.label }}
+                </div>
+                <div class="select-tag_operation">
+                  <i
+                    class="el-icon-close"
+                    @click.stop="onFieldRemove(item, fieldNameItem)"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div class="content-select" v-else-if="item.comType === 'input'">
+            <div class="content-inner" v-else-if="item.comType === 'input'">
               <el-input
                 v-model.trim="selectData[item.fieldKey]"
                 size="mini"
@@ -25,7 +58,7 @@
               ></el-input>
             </div>
 
-            <div class="content-select" v-else-if="item.comType === 'date'">
+            <div class="content-inner" v-else-if="item.comType === 'date'">
               <el-date-picker
                 v-model="selectData[item.fieldKey]"
                 size="mini"
@@ -85,7 +118,7 @@ export default {
     }
 
     function handleFieldRemove(item) {
-      const arrayComType = ["input", "date"];
+      const arrayComType = ["select", "date"];
       removeFieldItem(item);
       if (arrayComType.includes(item.comType)) {
         selectData.value[item.fieldKey] = [];
@@ -99,6 +132,47 @@ export default {
     function popoverDisabled(item) {
       const disabledComType = ["input", "date"];
       return disabledComType.includes(item.comType);
+    }
+
+    function onFieldRemove(fieldDataItem, removeItem) {
+      renderCnNameData.value[fieldDataItem.fieldKey] = renderCnNameData.value[
+        fieldDataItem.fieldKey
+      ].filter((item) => item.value !== removeItem.value);
+      if (fieldDataItem.comType === "radio") {
+        selectData.value[fieldDataItem.fieldKey] = "";
+        return;
+      }
+      selectData.value[fieldDataItem.fieldKey] = selectData.value[
+        fieldDataItem.fieldKey
+      ].filter((item) => item !== removeItem.value);
+    }
+
+    /**
+     * 下拉框选择事件
+     */
+    function onSelectChange(selection, fieldItem) {
+      // 置空已选回显项
+      set(renderCnNameData.value, fieldItem.fieldKey, []);
+
+      // 下拉数据源
+      let sourceData = fieldItem.selectList;
+
+      // 单选下拉
+      if (fieldItem.comType === "radio") {
+        let currentData = sourceData.find(
+          (sourceItem) => sourceItem.value === selection
+        );
+        renderCnNameData.value[fieldItem.fieldKey].push(currentData);
+        return;
+      }
+
+      // 获取label设置回显
+      selection.forEach((item) => {
+        let currentData = sourceData.find(
+          (sourceItem) => sourceItem.value === item
+        );
+        renderCnNameData.value[fieldItem.fieldKey].push(currentData);
+      });
     }
 
     /**
@@ -123,6 +197,8 @@ export default {
     return {
       popoverDisabled,
       handleFieldRemove,
+      onSelectChange,
+      onFieldRemove,
       handleItemDataChange,
       renderCnNameData,
       selectData,
@@ -135,17 +211,39 @@ export default {
 $custon-blue: #3f51b5;
 .search-bar-inner {
   display: flex;
+  flex-wrap: wrap;
   margin-right: 15px;
 
   .search-bar_item {
+    margin-bottom: 10px;
+    margin-right: 10px;
     cursor: pointer;
-    & + .search-bar_item {
-      margin-left: 10px;
+
+    .field-item {
+      &_content {
+        .content-select {
+          display: flex;
+          padding: 0 10px;
+
+          .select-tag {
+            display: flex;
+            align-items: center;
+            margin-right: 5px;
+            background: #fff;
+
+            &_operation {
+              margin-top: 4px;
+              vertical-align: bottom;
+            }
+          }
+        }
+      }
     }
+
     .field-item {
       display: flex;
       align-items: center;
-      padding: 2px 5px;
+      padding: 2px 20px;
       border-radius: 4px;
       min-height: 32px;
       background: #ccc;

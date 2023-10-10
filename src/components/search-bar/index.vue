@@ -16,8 +16,14 @@
           @onFieldClick="handleFieldClick"
         />
         <div class="search-bar_add-text" slot="reference">
-          <i class="el-icon-plus"></i>
-          <span>添加筛选</span>
+          <div v-if="!selectFieldDisabled">
+            <el-button class="search-operation" type="primary" icon="el-icon-plus"
+              >添加筛选</el-button
+            >
+          </div>
+          <div v-else>
+            <el-button class="search-operation" type="info">无可选字段</el-button>
+          </div>
         </div>
       </el-popover>
     </div>
@@ -77,12 +83,18 @@ export default {
      * 待选列表点击事件
      */
     function handleFieldClick(val) {
-      deepConfigList.value = deepConfigList.value.map((item) => {
+      let targetIndex = 0;
+      deepConfigList.value = deepConfigList.value.map((item, index) => {
         if (item.fieldKey === val.fieldKey) {
+          targetIndex = index;
           item.show = true;
         }
         return item;
       });
+
+      // 选中字段放到最后
+      deepConfigList.value.push(deepConfigList.value.splice(targetIndex, 1)[0]);
+
       getShowItem(deepConfigList.value);
       showSelectField.value = false;
 
@@ -119,8 +131,8 @@ export default {
     /**
      * 子组件值变化emit业务方
      */
-    function handleSelectDataChange(val){
-      emit("onSelectDataChange", val)
+    function handleSelectDataChange(val) {
+      emit("onSelectDataChange", val);
     }
 
     return {
@@ -141,9 +153,17 @@ $custom-blue: #3f51b5;
   display: flex;
 
   &_add {
+    margin-bottom: 10px;
     min-height: 32px;
     line-height: 32px;
     cursor: pointer;
+
+    .search-operation {
+      padding-top: 0;
+      padding-bottom: 0;
+      height: 36px;
+      line-height: 36px;
+    }
 
     &:hover {
       color: $custom-blue;
