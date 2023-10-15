@@ -1,6 +1,7 @@
 <template>
   <div class="search-bar">
     <SearchBarInner
+      v-bind="$attrs"
       :searchBarIemList="searchBarIemList"
       :configList="deepConfigList"
     />
@@ -17,12 +18,17 @@
         />
         <div class="search-bar_add-text" slot="reference">
           <div v-if="!selectFieldDisabled">
-            <el-button class="search-operation" type="primary" icon="el-icon-plus"
+            <el-button
+              class="search-operation"
+              type="primary"
+              icon="el-icon-plus"
               >添加筛选</el-button
             >
           </div>
           <div v-else>
-            <el-button class="search-operation" type="info">无可选字段</el-button>
+            <el-button class="search-operation" type="info"
+              >无可选字段</el-button
+            >
           </div>
         </div>
       </el-popover>

@@ -3,6 +3,7 @@
     <SearchBar
       @onSelectDataChange="handleSelectDataChange"
       :configList="configList"
+      :defaultSelection="defaultSelection"
     />
   </div>
 </template>
@@ -20,7 +21,50 @@ export default {
     SearchBar,
   },
   setup() {
+    const defaultSelection = ref({
+      category: ["category1", "subCategory1"],
+      workOrder: ["order1", "order2"],
+      class: "白班",
+      createdTime: ["2023-01-10", "2023-05-25"],
+      description: "哈哈哈哈",
+    });
     const configList = ref([
+      {
+        fieldKey: "category",
+        fieldName: "类型",
+        comType: "cascader",
+        selectList: [
+          {
+            label: "大类1",
+            value: "category1",
+            children: [
+              {
+                label: "小类1-1",
+                value: "subCategory1",
+              },
+              {
+                label: "小类1-2",
+                value: "subCategory2",
+              },
+            ],
+          },
+          {
+            label: "大类2",
+            value: "category2",
+            children: [
+              {
+                label: "小类2-1",
+                value: "subCategory1",
+              },
+              {
+                label: "小类2-2",
+                value: "subCategory2",
+              },
+            ],
+          },
+        ],
+        show: true,
+      },
       {
         fieldKey: "workOrder",
         fieldName: "任务令",
@@ -93,6 +137,7 @@ export default {
       console.log(val);
     }
     return {
+      defaultSelection,
       configList,
       handleSelectDataChange,
     };

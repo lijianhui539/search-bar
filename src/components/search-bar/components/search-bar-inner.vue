@@ -2,8 +2,8 @@
   <div class="search-bar-inner">
     <div
       class="search-bar_item"
-      v-for="item in searchBarIemList"
-      :key="item.fieldKey"
+      v-for="(item, index) in searchBarIemList"
+      :key="index"
     >
       <el-popover
         placement="bottom"
@@ -12,8 +12,10 @@
       >
         <el-select
           v-model="selectData[item.fieldKey]"
+          v-if="['select', 'radio'].includes(item.comType)"
           :multiple="item.comType === 'select'"
           collapse-tags
+          clearable
           :placeholder="'请选择' + item.fieldName"
           @change="(val) => onSelectChange(val, item)"
         >
@@ -26,17 +28,29 @@
           </el-option>
         </el-select>
 
+        <el-cascader
+          v-model="selectData[item.fieldKey]"
+          v-else-if="item.comType === 'cascader'"
+          :ref="item.fieldKey + 'CascaderRef'"
+          :options="item.selectList"
+          :props="{ expandTrigger: 'hover' }"
+          clearable
+          @change="(val) => onSelectChange(val, item)"
+        ></el-cascader>
+
         <div slot="reference" class="field-item">
           <div class="field-item_title">{{ item.fieldName }}：</div>
           <div class="field-item_content">
             <div
               class="content-select"
-              v-if="['select', 'radio'].includes(item.comType)"
+              v-if="['select', 'radio', 'cascader'].includes(item.comType)"
             >
               <div
                 class="select-tag"
-                v-for="fieldNameItem in renderCnNameData[item.fieldKey]"
-                :key="fieldNameItem.value"
+                v-for="(fieldNameItem, fieldIndex) in renderCnNameData[
+                  item.fieldKey
+                ]"
+                :key="fieldIndex"
               >
                 <div class="select-tag_value">
                   {{ fieldNameItem.label }}
@@ -91,7 +105,7 @@
  */
 
 // utils
-import { ref, inject, set, onMounted } from "@vue/composition-api";
+import { ref, inject, set, onMounted, nextTick } from "@vue/composition-api";
 // import { cloneDeep } from "lodash";
 
 export default {
@@ -105,13 +119,72 @@ export default {
       type: Array,
       default: () => [],
     },
+    defaultSelection: {
+      type: Object,
+      default: () => ({}),
+    },
   },
-  setup(props, { emit }) {
+  setup(props, { refs }) {
     const selectData = ref({});
     const renderCnNameData = ref({});
     const { removeFieldItem, handleSelectDataChange } =
       inject("parentComMethod");
-    console.log(props.searchBarIemList);
+
+    /**
+     * 设置默认回显项
+     */
+    function setDefaultData() {
+      for (const [key, val] of Object.entries(props.defaultSelection)) {
+        selectData.value[key] = val;
+        let currentFieldData = props.configList.find(
+          (item) => item.fieldKey === key
+        );
+
+        // 级联选择器设置回显
+        if (currentFieldData.comType === "cascader") {
+          nextTick(() => {
+            let currentCascaderRef =
+              refs?.[currentFieldData.fieldKey + "CascaderRef"]?.[0];
+
+            // 调用组件生成回显中文方法
+            currentCascaderRef.computePresentText();
+            let valCnName = currentCascaderRef.presentText;
+            let cascaderCnNameData = [
+              {
+                label: valCnName,
+                value: val.join("-"),
+              },
+            ];
+            set(
+              renderCnNameData.value,
+              currentFieldData.fieldKey,
+              cascaderCnNameData
+            );
+          });
+        }
+
+        // 单选下拉
+        if (currentFieldData.comType === "radio") {
+          renderCnNameData.value[currentFieldData.fieldKey] = [];
+          let currentData = currentFieldData.selectList.find(
+            (sourceItem) => sourceItem.value === val
+          );
+          renderCnNameData.value[currentFieldData.fieldKey].push(currentData);
+          return;
+        }
+
+        // 下拉框设置回显
+        if (currentFieldData.comType === "select") {
+          renderCnNameData.value[currentFieldData.fieldKey] = [];
+          val.forEach((item) => {
+            let currentData = currentFieldData.selectList.find(
+              (sourceItem) => sourceItem.value === item
+            );
+            renderCnNameData.value[currentFieldData.fieldKey].push(currentData);
+          });
+        }
+      }
+    }
 
     function handleItemDataChange() {
       handleSelectDataChange(selectData.value);
@@ -140,11 +213,32 @@ export default {
       ].filter((item) => item.value !== removeItem.value);
       if (fieldDataItem.comType === "radio") {
         selectData.value[fieldDataItem.fieldKey] = "";
-        return;
+      } else if (fieldDataItem.comType === "cascader") {
+        selectData.value[fieldDataItem.fieldKey] = [];
+      } else {
+        selectData.value[fieldDataItem.fieldKey] = selectData.value[
+          fieldDataItem.fieldKey
+        ].filter((item) => item !== removeItem.value);
       }
-      selectData.value[fieldDataItem.fieldKey] = selectData.value[
-        fieldDataItem.fieldKey
-      ].filter((item) => item !== removeItem.value);
+      handleSelectDataChange(selectData.value);
+    }
+
+    /**
+     * 通过val获取树对应节点
+     */
+    function findNodeByValue(tree, value) {
+      for (let node of tree) {
+        if (node.value === value) {
+          return [node];
+        }
+        if (node.children) {
+          const result = findNodeByValue(node.children, value);
+          if (result) {
+            return [node, ...result];
+          }
+        }
+      }
+      return null;
     }
 
     /**
@@ -166,6 +260,26 @@ export default {
         return;
       }
 
+      // 级联下拉
+      if (fieldItem.comType === "cascader") {
+        if (selection.length) {
+          nextTick(() => {
+            let currentCascaderRef =
+              refs?.[fieldItem.fieldKey + "CascaderRef"]?.[0];
+            let valCnName = currentCascaderRef.presentText;
+            renderCnNameData.value[fieldItem.fieldKey] = [
+              {
+                label: valCnName,
+                value: selection.join("-"),
+              },
+            ];
+          });
+          return;
+        }
+        renderCnNameData.value[fieldItem.fieldKey] = [];
+        return;
+      }
+
       // 获取label设置回显
       selection.forEach((item) => {
         let currentData = sourceData.find(
@@ -173,6 +287,7 @@ export default {
         );
         renderCnNameData.value[fieldItem.fieldKey].push(currentData);
       });
+      console.log(renderCnNameData.value);
     }
 
     /**
@@ -188,6 +303,8 @@ export default {
           set(selectData.value, item.fieldKey, "");
         }
       });
+      // 设置回显项
+      setDefaultData();
     }
 
     onMounted(() => {
@@ -201,6 +318,7 @@ export default {
       onFieldRemove,
       handleItemDataChange,
       renderCnNameData,
+      setDefaultData,
       selectData,
     };
   },
